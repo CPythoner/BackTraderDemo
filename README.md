@@ -1199,5 +1199,563 @@ up（上涨） 、 down（下跌） 表示价格/成交量的变化。
 
 ## 8.6 vol 成交参数
 
+本示例代码为 [PlotExt2vol.py](src/PlotExt2vol.py) 。
 
+默认的绘图函数代码是：
+
+```python
+cerebro.plot(style='candle')
+```
+
+这其中省略了两个和 volume 成交了相关的参数，这两个参数都是布尔类型：
+
+- **volume**：默认为 True，表示绘制成交量图形；若为 False，则不绘制成交量图形；
+- **voloverlay**：默认为 True，表示使用叠加绘制模式；若为 False，则表示非叠加模式，采用独立的 sub 子图绘制成交量。
+
+看看下面代码生成的图片：
+
+```python
+cerebro.plot(style="candle", volume=True)
+```
+
+![VolumeTrueVoloverlayTrue](images/VolumeTrueVoloverlayTrue.png)
+
+再看一下如下代码生成的图片：
+
+```python
+cerebro.plot(style="candle", volume=True, voloverlay=False)  # volume成交量：采用subplot子图模式，默认为voloverlay=True叠加模式
+```
+
+![VolumeTrueVoloverlayFalse](images/VolumeTrueVoloverlayFalse.png)
+
+volume成交量曲线相对来说比较重要， 所以BackTrader量化软件专门设计了一个plot_volume成交量曲线绘制子函数， 其关系属性示意图如下所示：
+
+![btr_plot_vol](images/btr_plot_vol.png)
+
+## 8.7 多图拼接模式
+
+本实例代码为  [PlotExt3.py](src/PlotExt3.py) 。
+
+在调用 plot 绘图函数时，使用 `numfigs` 设置图形数目，本示例设置为 5，结果图被切分为 5 张独立图片，而不是一张图片：
+
+```python
+# plot多图拼接，BT版的股市：《清明上河图》
+# 注意修改其实日期参数为：空字符串
+# numfigs，默认值为：1
+cerebro.plot(numfigs=5)
+```
+
+生成如下 5 张图片：
+
+![MultiPics](images/MultiPics.png)
+
+注意， 各图之间的时间指标是连续的， 把图拼起来就是一张很长的图。当数据太多时，单张图片的部分细节会模糊，影响显示效果。可以使用这种多图拼接模式，使细节更清晰。
+
+
+
+## 8.8 绘制 HA 平均 K 线图
+
+本实例代码  [PlotExt4hak.py](src/PlotExt4hak.py) 
+
+在 `cerebro.adddata(data) ` 代码行上面添加如下代码设置过滤器：
+
+```python
+# ----ha-k
+data.addfilter(bt.filters.HeikinAshi)
+```
+
+生成图片如下所示：
+
+![HAFilter](images/HAFilter.png)
+
+HA平均K线图通过对数值进行平均化处理， 更加容易发现买卖点信号， 即平均价格的波动， 更容易出现买卖的机会。 一般买卖点信号出现在连续颜色的突变时， 而单个交易日颜色的变化可以忽略。
+
+
+
+# 9. 回测结果分析
+
+## 9.1 常用量化分析指标
+
+使用BackTrader等量化软件做交易会生成大量的测试数据， 策略的好坏及稳定性等都要通过回测结果的分析来进行判定。
+常用的量化分析指标一般分为三类：
+
+1. **Return**， 收益指标。
+2. **Risk**， 风险指标。
+3. **Factor**， 多因子分析指标。
+
+
+
+下面进行具体分析。
+
+1. Return收益指标。
+   - Returns收益率， 通常为百分比形式的、 非累积的年/月/日等周期收益率， 即每个周期相对于上一个交易周期的收益比率。
+   - annual_return， 年化回报率， 使用策略投资一年的收益率。
+   - ROI， 投资回报率。
+   - cum_returns， 累计收益。
+   - VWR， 动态加权回报率。
+   - omega_ratio， 欧米伽比率， 用来分析收益分布， 指标数值越高越好， 它是对偏度和峰值的一个调整。
+   - benchmark_returns， 参考/基准（年化） 收益率， 标准指数（如SPY标普指数、 上证指数） 投资一年的收益率。
+
+   就量化策略而言， 最重要的就是投资回报率这个指标， 其主要用于评估策略模型的稳定性。 而好的量化策略的关键就是具有稳定性， 能够获取稳定的投资回报率。 判断策略稳定的标准是： 在多种产品组合和多个时间周期的情况下都能够稳定盈利。
+
+   
+
+   对于初学者而言， 重点关注投资回报率指标就可以了。 其他指标通常在投资回报率差不多的情况下， 对策略做一些辅助优化即可。
+
+2. Risk风险指标。包含：
+
+   - Alpha， 阿尔法指数， 非系统性风险投资指数。
+   - Beta， 贝塔指数， 系统性风险投资指数， 反映了策略对大盘变化的敏感性。
+   - Volatility， 波动率， 用来衡量策略的风险性， 波动率越大代表策略风险越高。
+   - annual_volatility， 年化波动率。
+   - information_ratio， 信息比率， 数值越高， 业绩表现持续优于大盘的程度越高。 该指标主要用来衡量投资组合所带来的超额收益。
+   - calmar_ratio， 卡尔马比率， 是年化收益率与历史最大回撤之间的比率。 数值越大， 表示业绩越好； 数值越小， 表示业绩越差。
+   - sharpe_ratio， 夏普指数/夏普比率， 是投资回报与风险的比例， 数值越大， 投资组合越佳。
+   -  sortino_ratio， 索提诺比率， 是夏普指数的修正版， 是用于评价投资资产、 组合或者策略收益的指标。
+   - downside_risk， 下行风险， 指未来价格走势有低于投资者预期目标价位的风险。
+   - tail_ratio， 尾比， 其含义是赚取的回报率比亏钱的比率大多少倍。
+   - MaxDown， 最大回撤数据， 用于衡量策略可能出现的最糟糕情况。
+   - SQN指数： 策略评级指数， 用于评估策略优劣。
+
+3. Factor多因子指标。
+
+   - Factor Autocorrelation， 因子的自回归程度。
+   - Profitable Count， 盈利的交易次数。
+   - Unprofitable Count， 亏损的交易次数。
+   - mean_return_by_quantile， 因子平均收益率数据。
+   - mean_return_difference， 收益率差值， 即最好因子收益率减去最差因子收益率。
+   - Return Ratio， 收益回撤比。
+   - N-day Variance Ratio， n日方差比率。
+   - Hurst， 赫斯特指数， 可衡量一个时间序列统计的相关性。
+   - cumulative_returns_by_quantile， 多因子累计收益率。
+   - Cash-netural Investment， 投资收益现金净值。
+
+   **专业因子指标如下。**
+
+   - 规模类因子： 总市值、 流通市值、 自由流通市值。
+   - 估值类因子： 市盈率（ TTM） 、 市净率、 市销率、 市现率、 企业价值倍数。
+   - 成长类因子： 营业收入同比增长率、 营业利润同比增长率、 母公司利润同比增长率、 现金流金额同比增长率。
+   - 盈利类因子： 净资产收益率（ ROE） 、 总资产报酬率（ ROA） 、销售毛利率、 销售净利率。
+   - 动量反转因子： 前1～6个月涨跌幅。
+   - 交投因子： 前一个月的日均换手率。
+   - 波动因子： 前一个月的波动率、 前一个月的振幅。
+   - 股东因子： 户均/机构持股比例、 户均/机构持股比例变化。
+   - 分析师因子： 预测当年净利润增长率、 主营业务收入增长率， 以及最近一个月的净利润上调幅度、 主营业务收入上调幅度、 上调评级占比。
+
+就目前国内量化交易的实际情况而言， 初学者只需重点掌握 BackTrader软件的常用功能， 能够灵活使用即可， 不需要对多因子进行深入分析。
+
+
+
+## 9.2 Analyzer 分析类
+
+内置Analyzer分析类的主要指标如下：
+● **AnnualReturn**， 年化回报率。
+● **Calmar**， 卡曼指数。
+● **DrawDown**， 最大回撤数据。
+● **TimeDrawDown**， 不同周期的最大回撤数据。
+● **PositionsValue**， 仓位变化数据。
+● **PyFolio**， 专业Folio量化图表分析。
+● **LogReturnsRolling**， 对数化回报率分析。
+● **PeriodStats**， 周期分析。
+● **Returns**， 回报率。
+● **SharpeRatio**， 夏普指数。
+● **SharpeRatio_A**， 修正版夏普指数。
+● **SQN**， 策略评估指数。
+● **TimeReturn**， 周期回报率。
+● **TradeAnalyzer**， 交易分析。
+● **Transactions**， 逐笔订单分析。
+● **VWR**， 动态加权回报率。
+比较专业的Analyzer分析类指标， 只在进行一些特殊分析的时候才需要使用， 本节讲解比较简单的量化回测分析案例， 介绍量化分析的基本操作， 仅使用到一些常用的量化分析指标， 如Sharp、 MaxDown等。
+
+
+
+在Analyzer分析模块中， 最重要的子模块是analyzer.Analyzer子模块。
+在analyzer.Analyzer子模块内部分布图中， 以“_”开头的函数是类内部函数， 其他主要函数如下。
+● 常规量化操作函数： next、 prenext、 nextstart、 start、 stop。
+● 数据获取函数： get_analysis。
+
+● 数据传递函数： notify_cashvalue、 notify_trade、 notify_order、notify_fund。
+● 其他类函数： Create_analysis、 print、 pprint。
+
+此外还有两个重要的函数： csv、 rets。
+
+
+
+## 9.3 Analyzer 分析模块架构图
+
+下图所示是 Analyzer 分析模块的核心部分，改图中最左边的圆形中的内容，是整个模块的入口：
+
+![btr_anz001](images/btr_anz001.png)
+
+从上图可以看到 ，Analyzer 分析模块的核心是 Analyzer 分析类及其类函数。Analyzer 分析类及其类函数又分为两个子类：
+
+- **TimeFrameAnalyzer**，时间周期分析子类；
+- **MetaAnalyzer**，元数据分析子类。
+
+注意， MetaTimeFrameAnalyzer（元数据分析的时间周期分析） 子类源自TimeFrameAnalyzer子类， 而不是由MetaAnalyzer子类派生出的。
+
+在BackTrader量化软件中， 把Analyzer分析模块中的TimeFrameAnalyzer子类作为核心子类， 而在其他量化软件中， 通常把时间周期分析也作为一个量化分析指标。
+
+MetaAnalyzer子类的设计非常巧妙， 其中的Meta元数据可以导入各种专业量化指标， 从而衍生出各种专业的量化分析指标， 如SQN指数、Sharp指数、 MaxDown等常用量化分析指标。
+
+这种巧妙的设计架构， 非常方便用户扩展各种量化分析指标和各种自定义分析指标， 大大简化了用户的编程工作。 
+
+
+
+下面再看一看 analyzer.Analyzer 子模块架构图， 如下图所示。由图可以看出， analyzer.Analyzer子模块是所有分析模块的基础， 定义了量化分析主要的类函数。 其中以“_”开头的函数是类内部函数， 其他主要函数有以下几类。
+● 常规量化操作函数： next、 prenext、 nextstart、 stop、 start。
+● 数据获取函数： get_analysis。
+● 数据传递函数： notify_trade、 notify_order、 notify_fund。
+● 其他类函数： create_analysis、 print、 pprint。
+
+![btr_anz002](images/btr_anz002.png)
+
+
+
+## 9.4 SQN 指数
+
+SQN 指数全称为 `System Quality Number`，即系统质量指数，用来评估量化策略的优劣。SQN 的计算公式为：
+
+```
+SQN=root(n)×expectancy/stdev(R)
+（SQN=交易次数n的平方根×交易系统的期望值/期望值的标准差）
+```
+
+其中，
+root（n） ： 一年交易次数n的平方根。
+expectancy： 交易系统的期望值， 以倍数（风险回报比） 表示。
+stdev（R） ： 期望值的标准差。
+
+
+
+评测的交易总次数最多不能超过100， 当然， 交易次数也有下限，即不能少于30。 当交易数量≥30时， SQN指数通常被认为是可靠的。
+SQN指数具有如下意义：
+● 交易次数越多， 获利机会越大。
+● 风险回报比越大越好。
+● 风险回报比的标准差越小， 交易结果越具有规律性， 回撤越小。
+
+SQN指数公式很简单， 要优化SQN指数也很简单：
+● 使交易次数和平均风险回报比的乘积尽可能大。
+● 使公式中的期望值标准差尽可能小。
+
+
+
+
+
+## 9.5 案例：回测数据基本分析
+
+本实例代码   [Analyzer1.py](src/Analyzer1.py) 。
+
+本节案例增加了一些回测分析函数指标，重点是 `addanalyzer` 分析指标添加函数：
+
+```python
+print("\n\t#2-5,设置每手交易数目为：10，不再使用默认值：1手")
+cerebro.addsizer(bt.sizers.FixedSize, stake=10)
+
+print("\n\t#2-6,设置addanalyzer分析参数")
+cerebro.addanalyzer(SQN)
+#
+cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="SharpeRatio", legacyannual=True)
+cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name="AnnualReturn")
+#
+cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="TradeAnalyzer")
+cerebro.addanalyzer(bt.analyzers.DrawDown, _name="DW")
+```
+
+以上代码为量化程序添加 SQN 指数、Sharp 指数、MaxDown 常用量化分析指标。
+
+
+
+`addanalyzer` 策略添加函数中改的 name 参数变量，主要用于分析结果和图标绘制。这些指标名称可以通过name 参数设置，一般使用默认模式，即指标函数名称。下图是该函数关系属性示意图：
+
+![btr_add_anz](images/btr_add_anz.png)
+
+量化分析编程主要有两个环节：
+
+1. 在主程序源码中的数据设置部分，设置各种常用的分析指标，并使用 `addanalyzer` 添加各种指标。
+2. 当量化程序运行完成时，在量化回测结果数据中提取各种分析数据。
+
+在量化回测结果数据中提取各种分析数据，需要从量化回测的返回值中获取分析数据：
+
+```python
+print("\n#3，调用BT回测入口程序，开始执行run量化回测运算")
+results = cerebro.run()
+```
+
+
+
+通过如下代码，把相关的回测结果数据提取出来，保存到 anzs 变量中：
+
+```python
+# ---------
+print("\n#5,analyzer分析BT量化回测数据")
+strat = results[0]
+anzs = strat.analyzers
+#
+dsharp = anzs.SharpeRatio.get_analysis()["sharperatio"]
+trade_info = anzs.TradeAnalyzer.get_analysis()
+#
+dw = anzs.DW.get_analysis()
+max_drowdown_len = dw["max"]["len"]
+max_drowdown = dw["max"]["drawdown"]
+max_drowdown_money = dw["max"]["moneydown"]
+#
+print("\t夏普指数SharpeRatio : ", dsharp)
+print("\t最大回撤周期 max_drowdown_len : ", max_drowdown_len)
+print("\t最大回撤 max_drowdown : ", max_drowdown)
+print("\t最大回撤(资金)max_drowdown_money : ", max_drowdown_money)
+```
+
+
+
+`anzs` 变量用于保存回测分析数据，该变量本身是复合字典格式，提取的各组分析数据都是标准的 dict 字典格式，各组分析数据的返回值也都是 dict 字典格式，可方便大家提取使用。各组回测结果都保存在 Analyzer 分析类的 `rets` 属性中，可以通过 `get_analysis` 函数读取。
+
+
+
+下图是 `get_analysis` 函数关系属性图：
+
+![btr_add_sta](images/btr_add_sta.png)
+
+由图可以看出，相关的分析结果不仅可以通过 rets 变量导出，也可以通过内置的 print、pprint 两个输出函数直接输出，而且输出的数据格式均进行过分组处理。
+
+
+
+本案例生成图片如下：
+
+![Analyzer1](images/Analyzer1.png)
+
+本案例各分析指标输出内容为：
+
+```shell
+#5,analyzer分析BT量化回测数据
+        夏普指数SharpeRatio :  -66.94067728496657
+        最大回撤周期 max_drowdown_len :  269
+        最大回撤 max_drowdown :  0.03984537510517593
+        最大回撤(资金)max_drowdown_money :  39.85270000001765
+```
+
+
+
+## 9.6 案例：回测数据扩展指标分析
+
+本实例代码： [Analyzer2.py](src/Analyzer2.py) 。
+
+上个案例已经添加了一些分析指标，本案例继续添加如下分析指标：
+
+- TimeReturn， 周期回报率
+- VWR， 动态加权回报率。
+
+添加分析指标的代码如下：
+
+```python
+# 周期回报率，不同时间周期
+cerebro.addanalyzer(
+    bt.analyzers.TimeReturn, timeframe=bt.TimeFrame.Years, _name="timReturns"
+)
+# cerebro.addanalyzer(bt.analyzers.TimeReturn, timeframe=bt.TimeFrame.Months,_name='timReturns')
+#
+# 动态加权回报率 Variability-Weighted Return: Better SharpeRatio with Log Returns
+cerebro.addanalyzer(bt.analyzers.VWR, _name="VWR")
+```
+
+添加输出代码如下：
+
+```python
+#
+print("\t#5-2,常用量化分析数据")
+print("\tSQN指数、AnnualReturn年化收益率，Trade交易分析报告")
+print("\t可以通过修改参数，改为其他时间周期：周、月、季度等")
+for alyzer in strat.analyzers:
+    alyzer.print()
+```
+
+
+
+本案例生成图片如下：
+
+![Analyzer2](images/Analyzer2.png)
+
+
+
+输入内容如下：
+
+```shell
+#5,analyzer分析BT量化回测数据
+        5-1夏普指数SharpeRatio :  -66.94067728496657
+        最大回撤周期 max_drowdown_len :  269
+        最大回撤 max_drowdown :  0.03984537510517593
+        最大回撤(资金)max_drowdown_money :  39.85270000001765
+        #5-2,常用量化分析数据
+        SQN指数、AnnualReturn年化收益率，Trade交易分析报告
+        可以通过修改参数，改为其他时间周期：周、月、季度等
+===============================================================================
+SQN:
+  - sqn: 1.0152350590677315
+  - trades: 32
+===============================================================================
+SharpeRatio:
+  - sharperatio: -66.94067728496657
+===============================================================================
+AnnualReturn:
+  - 2020: 8.860000000066037e-05
+  - 2021: 0.00038036629954540935
+===============================================================================
+TradeAnalyzer:
+  -----------------------------------------------------------------------------
+  - total:
+    - total: 32
+    - open: 0
+    - closed: 32
+  -----------------------------------------------------------------------------
+  - streak:
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - won:
+      - current: 1
+      - longest: 9
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - lost:
+      - current: 0
+      - longest: 2
+  -----------------------------------------------------------------------------
+  - pnl:
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - gross:
+      - total: 53.19999999999992
+      - average: 1.6624999999999974
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - net:
+      - total: 46.89999999999994
+      - average: 1.4656249999999982
+  -----------------------------------------------------------------------------
+  - won:
+    - total: 22
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - pnl:
+      - total: 122.12029999999996
+      - average: 5.5509227272727255
+      - max: 23.0399
+  -----------------------------------------------------------------------------
+  - lost:
+    - total: 10
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - pnl:
+      - total: -75.22030000000002
+      - average: -7.522030000000003
+      - max: -15.918399999999988
+  -----------------------------------------------------------------------------
+  - long:
+    - total: 32
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - pnl:
+      - total: 46.89999999999994
+      - average: 1.4656249999999982
+      *************************************************************************
+      - won:
+        - total: 122.12029999999996
+        - average: 5.5509227272727255
+        - max: 23.0399
+      *************************************************************************
+      - lost:
+        - total: -75.22030000000002
+        - average: -7.522030000000003
+        - max: -15.918399999999988
+    - won: 22
+    - lost: 10
+  -----------------------------------------------------------------------------
+  - short:
+    - total: 0
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - pnl:
+      - total: 0.0
+      - average: 0.0
+      *************************************************************************
+      - won:
+        - total: 0.0
+        - average: 0.0
+        - max: 0.0
+      *************************************************************************
+      - lost:
+        - total: 0.0
+        - average: 0.0
+        - max: 0.0
+    - won: 0
+    - lost: 0
+  -----------------------------------------------------------------------------
+  - len:
+    - total: 242
+    - average: 7.5625
+    - max: 26
+    - min: 1
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - won:
+      - total: 98
+      - average: 4.454545454545454
+      - max: 15
+      - min: 1
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - lost:
+      - total: 144
+      - average: 14.4
+      - max: 26
+      - min: 1
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - long:
+      - total: 242
+      - average: 7.5625
+      - max: 26
+      - min: 1
+      *************************************************************************
+      - won:
+        - total: 98
+        - average: 4.454545454545454
+        - max: 15
+        - min: 1
+      *************************************************************************
+      - lost:
+        - total: 144
+        - average: 14.4
+        - max: 26
+        - min: 1
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - short:
+      - total: 0
+      - average: 0.0
+      - max: 0
+      - min: 9223372036854775807
+      *************************************************************************
+      - won:
+        - total: 0
+        - average: 0.0
+        - max: 0
+        - min: 9223372036854775807
+      *************************************************************************
+      - lost:
+        - total: 0
+        - average: 0.0
+        - max: 0
+        - min: 9223372036854775807
+===============================================================================
+DrawDown:
+  - len: 31
+  - drawdown: 0.016181390901583496
+  - moneydown: 16.191600000005565
+  -----------------------------------------------------------------------------
+  - max:
+    - len: 269
+    - drawdown: 0.03984537510517593
+    - moneydown: 39.85270000001765
+===============================================================================
+TimeReturn:
+  - 2020-12-31: 8.860000000066037e-05
+  - 2021-12-31: 0.00038036629954540935
+===============================================================================
+VWR:
+  - vwr: 0.02078841499279231
+```
+
+输出信息中的TimeReturn时间周期回报率， 使用的周期也是year（年度） ， 所以最终数据和使用annual_return年化回报率完全相同。
+
+
+
+代码仓库链接：[CPythoner/BackTraderDemo at develop (github.com)](https://github.com/CPythoner/BackTraderDemo/tree/develop)
 
